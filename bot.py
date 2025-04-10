@@ -1,109 +1,98 @@
-# bot.py
 import os
 import random
 import discord
-from dotenv import load_dotenv
 from discord.ext import commands
+from dotenv import load_dotenv
+import aiohttp
 
 load_dotenv()
 TOKEN = os.getenv('DISCORD_TOKEN')
-GUILD = os.getenv('DISCORD_GUILD')
 
-bot = commands.Bot(command_prefix='!', intents=discord.Intents.all())
+intents = discord.Intents.all()
+intents.messages = True
+intents.reactions = True
+intents.guilds = True
+intents.members = True
+
+bot = commands.Bot(command_prefix='!', intents=intents)
 
 
 @bot.event
 async def on_ready():
     print(f'{bot.user.name} has connected to Discord!')
 
-    guild = discord.utils.get(bot.guilds, name=GUILD)
-    if guild:
-        print(
-            f'{bot.user} is connected to the following guild:\n'
-            f'{guild.name}(id: {guild.id})\n'
-        )
 
-        members = '\n - '.join([member.name for member in guild.members])
-        print(f'Guild Members:\n - {members}')
+@bot.command(name='hello', help='Responds with a greeting.')
+async def hello(ctx):
+    await ctx.send(f'Hello, {ctx.author.name}!')
+
+
+@bot.command(name='ping', help='Responds with Pong!')
+async def ping(ctx):
+    await ctx.send('Pong!')
+
+
+@bot.command(name='joke', help='Fetches a random joke.')
+async def joke(ctx):
+    async with aiohttp.ClientSession() as session:
+        async with session.get('https://v2.jokeapi.dev/joke/Any') as response:
+            if response.status == 200:
+                data = await response.json()
+                if data.get('type') == 'single':
+                    await ctx.send(data['joke'])
+                else:
+                    await ctx.send(f"{data['setup']} - {data['delivery']}")
+            else:
+                await ctx.send('Could not fetch a joke at this time.')
 
 
 @bot.event
-async def on_member_join(member):
-    await member.create_dm()
-    await member.dm_channel.send(
-        f'Hi {member.name}, welcome to my Discord server!'
-    )
-
-
-@bot.event
-async def on_message(message):
-    if message.author == bot.user:
+async def on_raw_reaction_add(payload):
+    guild = bot.get_guild(payload.guild_id)
+    if not guild:
         return
 
-    brooklyn_99_quotes = [
-        'I\'m the human form of the 💯 emoji.',
-        'Bingpot!',
-        (
-            'Cool. Cool cool cool cool cool cool cool, '
-            'no doubt no doubt no doubt no doubt.'
-        ),
-    ]
+    member = guild.get_member(payload.user_id)
+    if not member:
+        return
 
-    if message.content == '99!':
-        response = random.choice(brooklyn_99_quotes)
-        await message.channel.send(response)
-    elif message.content == 'raise-exception':
-        raise discord.DiscordException
-
-    await bot.process_commands(message)
+    if payload.emoji.name == '👍':
+        role = discord.utils.get(guild.roles, name='Member')
+        if role:
+            await member.add_roles(role)
+            print(f"Assigned 'Member' role to {member.name}")
 
 
 @bot.event
-async def on_error(event, *args, **kwargs):
-    with open('err.log', 'a') as f:
-        if event == 'on_message':
-            f.write(f'Unhandled message: {args[0]}\n')
-        else:
-            raise
+async def on_raw_reaction_remove(payload):
+    guild = bot.get_guild(payload.guild_id)
+    if not guild:
+        return
+
+    member = guild.get_member(payload.user_id)
+    if not member:
+        return
+
+    if payload.emoji.name == '👍':
+        role = discord.utils.get(guild.roles, name='Member')
+        if role:
+            await member.remove_roles(role)
+            print(f"Removed 'Member' role from {member.name}")
 
 
-@bot.event
-async def on_command_error(ctx, error):
-    if isinstance(error, commands.errors.CheckFailure):
-        await ctx.send('You do not have the correct role for this command.')
+@bot.command(name='embed', help='Sends a custom embed message.')
+async def embed(ctx):
+    embed = discord.Embed(
+        title="Custom Embed",
+        description="This is an example of a custom embed message.",
+        color=discord.Color.blue()
+    )
+    embed.add_field(
+        name="Field 1", value="This is the value for field 1.", inline=False)
+    embed.add_field(
+        name="Field 2", value="This is the value for field 2.", inline=False)
+    embed.set_footer(text="This is a footer.")
+    await ctx.send(embed=embed)
 
-
-@bot.command(name='99', help='Responds with a random quote from Brooklyn 99')
-async def nine_nine(ctx):
-    brooklyn_99_quotes = [
-        'I\'m the human form of the 💯 emoji.',
-        'Bingpot!',
-        (
-            'Cool. Cool cool cool cool cool cool cool, '
-            'no doubt no doubt no doubt no doubt.'
-        ),
-    ]
-
-    response = random.choice(brooklyn_99_quotes)
-    await ctx.send(response)
-
-
-@bot.command(name='roll_dice', help='Simulates rolling dice.')
-async def roll(ctx, number_of_dice: int, number_of_sides: int):
-    dice = [
-        str(random.choice(range(1, number_of_sides + 1)))
-        for _ in range(number_of_dice)
-    ]
-    await ctx.send(', '.join(dice))
-
-
-@bot.command(name='create-channel')
-@commands.has_role('admin')
-async def create_channel(ctx, channel_name='real-python'):
-    guild = ctx.guild
-    existing_channel = discord.utils.get(guild.channels, name=channel_name)
-    if not existing_channel:
-        print(f'Creating a new channel: {channel_name}')
-        await guild.create_text_channel(channel_name)
 
 bot.run(TOKEN)
