@@ -25,37 +25,29 @@ Welcome to the ACM Discord Bot Workshop! In this session, we'll guide you throug
 
 ---
 
-## 🚀 Getting Started
+## 🚀 Setup Instructions
 
-### 1. Clone the Repositry
+### 1. Remix the Project  
+Go to 👉 [**acmurl.com/discord-bot-repl**](https://acmurl.com/discord-bot-repl)  
+Click **“Remix”** in the top right to create your own copy.
 
-```bash
-git clone https://github.com/your-username/acm-discord-bot.git
-cd acm-discord-bot
-```
+### 2. Add Your Bot Token  
+In the **left sidebar**, click the file named `.env`.
 
-### 2. Install Dependences
-
-Ensure you have Python 3.8 or higher installed. Then, install the required packages.
-
-```bash
-pip install -r requirements.txt
-```
-
-### 3. Set Up Environment Variabes
-
-Create a `.env` file in the root directory and add your Discord bot token.
+Paste this into the file (or replace the existing line):
 
 ```env
-DISCORD_TOKEN=your_bot_token_here
+DISCORD_TOKEN=your_token_here
 ```
 
-### 4. Run the bot
+> 🔐 Keep this token private. Anyone with your token can control your bot!
 
-Start the bot using
-
-```bash
-python bot.py
+### 3. Run the Bot  
+Click the green **"Run"** button at the top of the screen.  
+You should see output like:
+```
+YourBotName has connected to Discord!
+Synced 4 command(s) with Discord.
 ```
 
 ---
